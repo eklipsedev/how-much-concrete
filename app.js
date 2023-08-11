@@ -23,6 +23,7 @@ const totalConcrete = document.querySelector("#totalConcrete");
 const totalBags = document.querySelector("#totalBags");
 const totalCost = document.querySelector("#totalCost");
 
+// what unit is this in?
 let total = 0;
 
 let wastePercentageAmount = 1;
@@ -41,9 +42,9 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
       { quantity: 1 }
     ]
   },
@@ -53,9 +54,9 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
       { quantity: 1 }
     ]
   },
@@ -65,9 +66,9 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
       { quantity: 1 }
     ]
   },
@@ -77,8 +78,8 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
       { quantity: 1 }
     ]
   },
@@ -88,11 +89,11 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
       { quantity: 1 }
     ]
   },
@@ -102,10 +103,11 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { stepCount: null },
       { quantity: 1 }
     ]
   },
@@ -115,12 +117,22 @@ const measurements = {
     subtotals: 0,
     totals: [],
     template: [
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
-      { unit1: null, unit2: null, unit3: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
+      { unit1: null, unit2: null },
       { quantity: 1 }
     ]
   }
+};
+
+// check if the user is in an imperial country
+const isImperialCountry = () => {
+  const imperialCountries = ["US", "LR", "MM"]; // Add more country codes as needed
+
+  const userLanguage = (navigator.language || "en-US").toUpperCase();
+  const userCountryCode = userLanguage.split("-")[1];
+
+  return imperialCountries.includes(userCountryCode);
 };
 
 const twoDecimals = (value) => {
@@ -133,7 +145,8 @@ const selector = (calculator, row) => {
   const unitGroup = rowGroup.querySelector(
     `[data-unit="${settings.unitName()}"]`
   );
-  const unit1Multiplier = settings.metric ? 1 : 12;
+  const unit1Multiplier = settings.metric ? 39.37 : 12;
+  const unit2Multiplier = settings.metric ? 2.54 : 1;
 
   const hasValue = (el) => {
     return parseFloat(!el.value ? 0 : el.value);
@@ -144,11 +157,13 @@ const selector = (calculator, row) => {
     return (
       hasValue(unitGroup.querySelector('[data-type="unit1"]')) *
         unit1Multiplier +
-      hasValue(unitGroup.querySelector('[data-type="unit2"]')) +
-      hasValue(unitGroup.querySelector('[data-type="unit3"]'))
+      hasValue(unitGroup.querySelector('[data-type="unit2"]')) / unit2Multiplier
     );
   } else {
-    return hasValue(rowGroup.querySelector('[data-type="quantity"]'));
+    return hasValue(
+      rowGroup.querySelector('[data-type="quantity"]') ||
+        rowGroup.querySelector('[data-type="stepCount"]')
+    );
   }
 };
 
@@ -162,14 +177,20 @@ const calculateTemplate = (type) => {
 
   if (calculators.length) {
     calculators.forEach((calculator, index) => {
-      let length, width, quantity, height;
+      let length, width, quantity, height, depth;
       let formula;
 
       switch (type) {
-        case measurements.slab.type ||
-          measurements.wall.type ||
-          measurements.footing.type:
-          const depth = selector(calculator, "depth");
+        case measurements.slab.type:
+          depth = selector(calculator, "depth");
+          length = selector(calculator, "length");
+          width = selector(calculator, "width");
+          quantity = selector(calculator, "quantity");
+
+          formula = length * width * depth * quantity;
+          break;
+        case measurements.footing.type:
+          depth = selector(calculator, "depth");
           length = selector(calculator, "length");
           width = selector(calculator, "width");
           quantity = selector(calculator, "quantity");
@@ -184,11 +205,12 @@ const calculateTemplate = (type) => {
           formula = (diameter * Math.PI * height * height * quantity) / 4;
           break;
         case measurements.curbGutter.type:
+          length = selector(calculator, "length");
           const curbDepth = selector(calculator, "curbDepth");
           const curbHeight = selector(calculator, "curbHeight");
           const flagThickness = selector(calculator, "flagThickness");
           const gutterWidth = selector(calculator, "gutterWidth");
-          length = selector(calculator, "length");
+          quantity = selector(calculator, "quantity");
 
           formula =
             quantity *
@@ -200,17 +222,19 @@ const calculateTemplate = (type) => {
           const run = selector(calculator, "run");
           const platformDepth = selector(calculator, "platformDepth");
           width = selector(calculator, "width");
+          const stepCount = selector(calculator, "stepCount");
           quantity = selector(calculator, "quantity");
 
-          let stepCount = 0;
+          let steps = 0;
           // formula
-          for (stepCount = 0; stepCount < quantity; stepCount++) {
-            if (stepCount === quantity - 1) {
-              formula = width * rise * (stepCount + 1) * platformDepth;
+          for (steps = 0; steps < stepCount; steps++) {
+            if (steps === stepCount - 1) {
+              formula = width * rise * (steps + 1) * platformDepth * quantity;
             } else {
-              formula += width * rise * (stepCount + 1) * run;
+              formula += width * rise * (steps + 1) * run * quantity;
             }
           }
+
           break;
         case measurements.tube.type:
           const innerDiameter = selector(calculator, "innerDiameter");
@@ -313,15 +337,18 @@ const appendTemplate = (type) => {
       .getElementsByTagName("li")[0];
     const clonedItem = template.cloneNode(true);
     calculatorList.appendChild(clonedItem);
+    empty.style.display = "none";
   }
 };
 
 const settings = {
-  metric: false,
+  metric: isImperialCountry() ? false : true,
   unitName: () => {
     return settings.metric ? "metric" : "imperial";
   },
-  bagSize: "80",
+  bagSize: () => {
+    return settings.metric ? "50" : "80";
+  },
   costPerBag: "",
   wastePercentage: "0",
   initLocalStorage: () => {
@@ -334,11 +361,12 @@ const settings = {
       if (storedSettings.metric) {
         toggle.checked = true;
         settings.metric = true;
+        document.body.className = "is-metric";
       } else {
         toggle.checked = false;
         settings.metric = false;
+        document.body.className = "is-imperial";
       }
-      document.body.className = `is-${settings.unitName()}`;
 
       // bag size check
       bagSize.value = storedSettings.bagSize;
@@ -351,8 +379,10 @@ const settings = {
       // waste percentage check
       wastePercentage.value = storedSettings.wastePercentage;
     } else {
+      // set class to body based on user location
+      document.body.className = `is-${settings.unitName()}`;
       toggle.checked = settings.metric;
-      bagSize.value = settings.bagSize;
+      bagSize.value = settings.bagSize();
       costPerBag.value = "";
       wastePercentage.value = settings.wastePercentage;
 
@@ -361,7 +391,7 @@ const settings = {
         "settings",
         JSON.stringify({
           metric: settings.metric,
-          bagSize: settings.bagSize,
+          bagSize: settings.bagSize(),
           costPerBag: settings.costPerBag,
           wastePercentage: settings.wastePercentage
         })
@@ -422,7 +452,7 @@ const settings = {
         n = `${matchName(e.target.closest("li").dataset.calculator)} removed`;
         break;
       case "reset":
-        n = "calculator reset";
+        n = "measurements reset";
         break;
       case "waste percentage change":
         n = "waste percentage updated";
@@ -437,13 +467,13 @@ const settings = {
         n = "";
     }
 
-    message.textContent = n;
     title.textContent = t;
     title.textContent === "✗ warning"
       ? (title.style.color = "red")
       : (title.style.color = "#ffb238");
 
     setTimeout(() => {
+      message.textContent = n;
       notification.classList.add("is-active");
     }, 200);
 
@@ -476,7 +506,7 @@ const calculator = {
     // run calculation based on unit type
     const wastePercentageAmount = wastePercentage.value / 100 + 1;
     const isZero = (unitType) => {
-      return unitType.toFixed(2) > 0 ? unitType.toFixed(2) : "— —";
+      return unitType.toFixed(2) > 0 ? unitType.toFixed(2) : "—";
     };
 
     if (!settings.metric) {
@@ -490,7 +520,7 @@ const calculator = {
       totalBags.textContent = isZero(lbs);
     } else {
       // run metric code
-      volumeMeters = total * wastePercentageAmount;
+      volumeMeters = (total / 61020) * wastePercentageAmount;
       totalConcrete.textContent = isZero(volumeMeters);
 
       kgs = (volumeMeters * 2130) / bagSize.value;
@@ -504,109 +534,57 @@ const calculator = {
         twoDecimals(totalBags.textContent) * twoDecimals(costPerBag.value)
       );
     } else {
-      totalCost.textContent = "— —";
+      totalCost.textContent = "—";
     }
   },
-  unaccountedAmounts: [],
   convertRows: () => {
-    const getDecimalPart = (num, unitType) => {
-      if (Number.isInteger(num)) {
-        return 0;
-      }
-
-      const decimalStr = num.toString().split(".")[1];
-      return unitType === "imperial"
-        ? parseFloat(`.${decimalStr}`)
-        : Number(decimalStr);
+    const hasValue = (unit) => {
+      return unit != "" ? parseFloat(unit.toFixed(3)).toString() : "";
     };
 
-    const isBlank = (unit) => {
-      return unit.value !== "" ? parseFloat(unit.value) : 0;
-    };
+    // handle conversion between feet and meters
+    function convertFeetToMeters(feet) {
+      const metersPerFoot = 0.3048;
+      return hasValue(feet * metersPerFoot); //(feet * metersPerFoot).toFixed(3);
+    }
 
-    const unitMultiplier = (unit) => {
-      return unit.value * 100;
-    };
+    function convertMetersToFeet(meters) {
+      const feetPerMeter = 3.28084;
+      return hasValue(meters * feetPerMeter);
+    }
 
-    const isOverNine = (value) => {
-      const thirdValue = value.toFixed(4).toString().split(".")[1].slice(2, 3);
-      const fourthValue = value.toFixed(4).toString().split(".")[1].slice(3, 4);
-      return thirdValue === 9 && fourthValue > 5 ? 9 : thirdValue;
-      // with the above, round up instead and add 1 to cm instead of rounding down
-    };
+    // handle conversion between inches and centimeters
+    function convertInchesToCentimeters(inches) {
+      const centimetersPerInch = 2.54;
+      return hasValue(inches * centimetersPerInch);
+    }
+
+    function convertCentimetersToInches(centimeters) {
+      const inchesPerCentimeter = 0.393701;
+      return hasValue(centimeters * inchesPerCentimeter);
+    }
 
     let calculatorListItems = Array.from(calculatorList.children);
 
     calculatorListItems.forEach((listItem, listItemIndex) => {
-      if (!calculator.unaccountedAmounts[listItemIndex]) {
-        calculator.unaccountedAmounts.push({
-          rows: []
-        });
-      }
       let rows = Array.from(listItem.querySelector("ul").children);
 
       rows.forEach((row, rowIndex) => {
         let metricRow = row.querySelector(`[data-unit="metric"]`);
         let imperialRow = row.querySelector(`[data-unit="imperial"]`);
 
-        let getRow =
-          calculator.unaccountedAmounts[listItemIndex].rows[rowIndex];
-
-        let theRow = isNaN(getRow) ? (getRow = 0) : getRow;
-
         if (metricRow && imperialRow) {
           let metricUnit1 = metricRow.querySelector('[data-type="unit1"]');
           let metricUnit2 = metricRow.querySelector('[data-type="unit2"]');
-          let metricUnit3 = metricRow.querySelector('[data-type="unit3"]');
 
           let imperialUnit1 = imperialRow.querySelector('[data-type="unit1"]');
           let imperialUnit2 = imperialRow.querySelector('[data-type="unit2"]');
-          let imperialUnit3 = imperialRow.querySelector('[data-type="unit3"]');
 
           if (settings.unitName() !== "metric") {
             // metric to imperial
-            const dyadicValues = [
-              0,
-              0.0625,
-              0.125,
-              0.1875,
-              0.25,
-              0.3125,
-              0.375,
-              0.4375,
-              0.5,
-              0.5625,
-              0.625,
-              0.6875,
-              0.75,
-              0.8175,
-              0.875,
-              0.9375
-            ];
 
-            const totalInches =
-              unitMultiplier(metricUnit1) /*metric*/ / 2.54 +
-              unitMultiplier(metricUnit2) /*metric*/ / 2.54 +
-              unitMultiplier(metricUnit3) /*metric*/ / 2.54 +
-              theRow * 39.37;
-            const feetFromTotalInches = Math.floor(totalInches / 12);
-            const leftoverInches = totalInches - 12 * feetFromTotalInches;
-            const leftoverDyadicInches = getDecimalPart(
-              leftoverInches,
-              "imperial"
-            ); //leftoverInches % 2;
-            const dyadicAmount = dyadicValues.reduce((prev, curr) => {
-              return Math.abs(curr - leftoverDyadicInches) <
-                Math.abs(prev - leftoverDyadicInches)
-                ? curr
-                : prev;
-            });
-            theRow = totalInches - dyadicAmount.toFixed(3);
-
-            imperialUnit1.value =
-              feetFromTotalInches !== 0 ? feetFromTotalInches : "";
-            imperialUnit2.value = Math.floor(leftoverInches);
-            imperialUnit3.value = dyadicAmount;
+            imperialUnit1.value = convertMetersToFeet(metricUnit1.value);
+            imperialUnit2.value = convertCentimetersToInches(metricUnit2.value);
 
             setSelectClass(
               imperialUnit1,
@@ -616,46 +594,12 @@ const calculator = {
               imperialUnit2,
               parseFloat(imperialUnit2.value) === 0
             );
-            setSelectClass(
-              imperialUnit3,
-              parseFloat(imperialUnit3.value) === 0
-            );
           } else {
-            // imperial to metric
-            // FEET/INCHES TO METERS
-            // 3ft × 0.3048 + 2in × 0.0254
-            // = 0.9652m
-
-            const totalMeters =
-              //(leftoverDyadicAmount / 39.37) * 100;
-              (isBlank(imperialUnit1) * 12 +
-                isBlank(imperialUnit2) +
-                isBlank(imperialUnit3)) /
-              39.37;
-            const metersValue = Math.floor(totalMeters);
-            const cmValue =
-              totalMeters > 0
-                ? twoDecimals(String(getDecimalPart(totalMeters)).slice(0, 2)) /
-                  100
-                : "0";
-
-            const mmValue =
-              totalMeters > 0
-                ? parseFloat(isOverNine(totalMeters)) / 1000
-                : "0";
-            calculator.unaccountedAmounts[listItemIndex].rows[rowIndex] =
-              totalMeters - totalMeters.toFixed(3);
-
-            console.log(metersValue);
-            console.log(cmValue);
-            console.log(mmValue);
-            metricUnit1.value = metersValue != "0" ? metersValue : "";
-            metricUnit2.value = cmValue != "0" ? cmValue.toFixed(2) : "0";
-            metricUnit3.value = mmValue != "0" ? mmValue.toFixed(3) : "0";
+            metricUnit1.value = convertFeetToMeters(imperialUnit1.value);
+            metricUnit2.value = convertInchesToCentimeters(imperialUnit2.value);
 
             setSelectClass(metricUnit1, parseFloat(metricUnit1.value) === 0);
             setSelectClass(metricUnit2, parseFloat(metricUnit2.value) === 0);
-            setSelectClass(metricUnit3, parseFloat(metricUnit3.value) === 0);
           }
         }
       });
@@ -700,23 +644,21 @@ const calculator = {
               if (unitGroup) {
                 const unit1 = unitGroup.querySelector('[data-type="unit1"]');
                 const unit2 = unitGroup.querySelector('[data-type="unit2"]');
-                const unit3 = unitGroup.querySelector('[data-type="unit3"]');
 
                 if (unit1) {
                   unit1.value = value("unit1");
                 }
                 if (unit2) {
-                  unit2.value = value("unit2") ? value("unit2") : 0;
-                  setSelectClass(unit2, unit2.value == 0);
-                }
-                if (unit3) {
-                  unit3.value = value("unit3") ? value("unit3") : 0;
-                  setSelectClass(unit3, unit3.value == 0);
+                  unit2.value = value("unit2");
                 }
               } else {
                 const quantity = row.querySelector('[data-type="quantity"]');
+                const stepCount = row.querySelector('[data-type="stepCount"]');
                 if (quantity) {
                   quantity.value = value("quantity");
+                }
+                if (stepCount) {
+                  stepCount.value = value("stepCount");
                 }
               }
             }
@@ -729,17 +671,16 @@ const calculator = {
   getLocalStorage: () => {
     let savedCalculator = localStorage.getItem("calculator")
       ? JSON.parse(localStorage.getItem("calculator"))
-      : localStorage.setItem("calculator", JSON.stringify([]))
-      ? JSON.parse(localStorage.getItem("calculator"))
       : [];
 
     // check if any of the inputs have a value assigned to them
     // if not, start with a new calculator
 
-    if (
-      !savedCalculator.length ||
-      (savedCalculator.length && totalConcrete.textContent === "— —")
-    ) {
+    if (!savedCalculator.length) {
+      typeCheck(savedCalculator, calculator.type, "set");
+      localStorage.setItem("calculator", JSON.stringify(savedCalculator));
+      calculator.render(savedCalculator);
+    } else if (savedCalculator.length && totalConcrete.textContent === "—") {
       typeCheck(savedCalculator, calculator.type, "set");
       localStorage.setItem("calculator", JSON.stringify(savedCalculator));
       calculator.render(savedCalculator);
@@ -849,6 +790,7 @@ const calculator = {
     calculator.calculateTotal();
   },
   init: () => {
+    isImperialCountry();
     settings.initLocalStorage();
     calculator.getLocalStorage();
     calculator.calculateTotal();
@@ -974,12 +916,16 @@ const removeItem = (e) => {
 const resetCalculatorListItems = (e) => {
   calculator.updateLocalStorage(e, "reset");
   calculatorList.innerHTML = "";
+  /*
   if (calculator.type !== "main") {
     appendTemplate(calculator.type);
     calculator.setLocalStorage();
+    empty.style.display = "none";
   } else {
     empty.style.display = "block";
   }
+  */
+  empty.style.display = "block";
 
   calculator.calculateTotal();
   document.body.scrollTop = document.documentElement.scrollTop = 0;
