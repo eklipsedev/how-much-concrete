@@ -2,6 +2,7 @@ const metadata = JSON.parse(document.querySelector("#metadata").textContent);
 const calculatorList = document.querySelector(
   "[data-element='calculator-list']"
 );
+const results = document.querySelector("[data-element='results']");
 const empty = document.querySelector("[data-element='empty']");
 
 const unitToggle = document.querySelector('[data-setting="unitType"]');
@@ -100,6 +101,13 @@ function calculateTotal() {
     );
   } else {
     totalCost.textContent = "—";
+  }
+
+  // set conditional for when the results element should show
+  if (total === 0) {
+    results.style.display = "none";
+  } else {
+    results.style.display = "flex";
   }
 }
 
