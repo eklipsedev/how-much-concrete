@@ -4,7 +4,8 @@ const calculatorList = document.querySelector(
 );
 const empty = document.querySelector("[data-element='empty']");
 
-const toggle = document.querySelector('[data-setting="unitType"]');
+const unitToggle = document.querySelector('[data-setting="unitType"]');
+const costToggle = document.querySelector('[data-setting="costType"]');
 const bagSize = document.querySelector('[data-setting="bagSize"]');
 const costPerBag = document.querySelector('[data-setting="costPerBag"]');
 const wastePercentage = document.querySelector(
@@ -14,6 +15,8 @@ const wastePercentage = document.querySelector(
 const totalConcrete = document.querySelector("[data-element='total-concrete']");
 const totalBags = document.querySelector("[data-element='total-bags']");
 const totalCost = document.querySelector("[data-element='total-cost']");
+
+const body = document.body;
 
 // what unit is this in?
 let total = 0;
@@ -29,6 +32,9 @@ let lbs = 0;
 // Settings
 const settings = {
   unitType: isImperialCountry() ? "imperial" : "metric",
+  costType: () => {
+    return costToggle.checked ? "cost-per-area" : "cost-per-bag";
+  },
   bagSize: () => {
     return settings.unitType === "imperial" ? "80" : "50";
   },
@@ -80,15 +86,17 @@ function calculateTotal() {
     kgs = (volumeMeters * 2130) / bagSize.value;
 
     totalConcrete.textContent = isZero(volumeMeters);
-    console.log(volumeYards);
     totalBags.textContent = isZero(kgs);
   }
 
   // set total cost
   if (calculatorList.children.length && costPerBag.value !== "") {
+    const isBags = body.classList.contains("is-cost-per-bag")
+      ? totalBags
+      : totalConcrete;
+
     totalCost.textContent = isZero(
-      setToTwoDecimals(totalBags.textContent) *
-        setToTwoDecimals(costPerBag.value)
+      setToTwoDecimals(isBags.textContent) * setToTwoDecimals(costPerBag.value)
     );
   } else {
     totalCost.textContent = "—";
@@ -467,13 +475,34 @@ function setLocalStorageItem(key, value) {
 }
 
 function toggleUnitTypeCheckbox(e) {
-  toggle.checked
+  unitToggle.checked
     ? (settings.unitType = "metric")
     : (settings.unitType = "imperial");
-  document.body.className = `is-${settings.unitType}`;
+  if (body.classList.contains("is-imperial")) {
+    body.classList.remove("is-imperial");
+    body.classList.add("is-metric");
+  } else if (body.classList.contains("is-metric")) {
+    body.classList.remove("is-metric");
+    body.classList.add("is-imperial");
+  }
   convertRows();
   calculateTotal();
   updateLocalStorageCalcs(e, "updateUnitTypeValues");
+}
+
+function toggleCostTypeCheckbox(e) {
+  costToggle.checked
+    ? (settings.costType = "cost-per-area")
+    : (settings.costType = "cost-per-bag");
+  if (body.classList.contains("is-cost-per-bag")) {
+    body.classList.remove("is-cost-per-bag");
+    body.classList.add("is-cost-per-area");
+  } else if (body.classList.contains("is-cost-per-area")) {
+    body.classList.remove("is-cost-per-area");
+    body.classList.add("is-cost-per-bag");
+  }
+  calculateTotal();
+  updateLocalStorageCalcs(e, "updateCostTypeValues");
 }
 
 // add checked class to input when checked
@@ -487,6 +516,14 @@ function setCheckboxStyle(input) {
 
 function setInputFadeStyle(condition, el) {
   condition ? el.classList.remove("is-faded") : el.classList.add("is-faded");
+}
+
+function toggleClass(element, className) {
+  if (element.classList.contains(className)) {
+    element.classList.remove(className);
+  } else {
+    element.classList.add(className);
+  }
 }
 
 function setToTwoDecimals(value) {
@@ -599,7 +636,7 @@ function calculateTemplate(type) {
           quantity = getValueOfInput(calculator, "quantity");
 
           if (outerDiameter < innerDiameter) {
-            settings.deliverMessage(e, "tube change");
+            settings.deliverMessage("tube change");
             return;
           }
           formula =
@@ -656,13 +693,36 @@ function initLocalStorageSettings() {
   if (storedSettings) {
     // unit type check
     if (storedSettings.unitType === "metric") {
-      toggle.checked = true;
+      unitToggle.checked = true;
       settings.unitType = "metric";
-      document.body.className = "is-metric";
+      if (body.classList.contains("is-imperial")) {
+        body.classList.remove("is-imperial");
+        body.classList.add("is-metric");
+      }
     } else {
-      toggle.checked = false;
+      unitToggle.checked = false;
       settings.unitType = "imperial";
-      document.body.className = "is-imperial";
+      if (body.classList.contains("is-metric")) {
+        body.classList.remove("is-metric");
+        body.classList.add("is-imperial");
+      }
+    }
+
+    // cost type check
+    if (storedSettings.costType === "cost-per-area") {
+      costToggle.checked = true;
+      settings.costType = "cost-per-area";
+      if (body.classList.contains("is-cost-per-bag")) {
+        body.classList.remove("is-cost-per-bag");
+        body.classList.add("is-cost-per-area");
+      }
+    } else {
+      costToggle.checked = false;
+      settings.costType = "cost-per-bag";
+      if (body.classList.contains("is-cost-per-area")) {
+        body.classList.remove("is-cost-per-area");
+        body.classList.add("is-cost-per-bag");
+      }
     }
 
     // bag size check
@@ -677,8 +737,8 @@ function initLocalStorageSettings() {
     wastePercentage.value = storedSettings.wastePercentage;
   } else {
     // set class to body based on user location
-    document.body.className = `is-${settings.unitType}`;
-    toggle.checked = settings.UnitType === "metric" ? true : false; //settings.metric;
+    document.body.classList.add(`is-${settings.unitType}`);
+    unitToggle.checked = settings.UnitType === "metric" ? true : false; //settings.metric;
     bagSize.value = settings.bagSize();
     costPerBag.value = "";
     wastePercentage.value = settings.wastePercentage;
@@ -686,17 +746,20 @@ function initLocalStorageSettings() {
     // set current item back to local storage
     setLocalStorageItem("settings", {
       unitType: settings.unitType,
+      costType: settings.costType(),
       bagSize: settings.bagSize(),
       costPerBag: settings.costPerBag,
       wastePercentage: settings.wastePercentage
     });
   }
-  setCheckboxStyle(toggle);
+  setCheckboxStyle(unitToggle);
+  setCheckboxStyle(costToggle);
 }
 
 function updateLocalStorageSettings() {
   setLocalStorageItem("settings", {
     unitType: settings.unitType,
+    costType: settings.costType,
     bagSize: bagSize.value,
     costPerBag: costPerBag.value,
     wastePercentage: wastePercentage.value
@@ -911,6 +974,9 @@ document.addEventListener("change", (e) => {
       case "unitType":
         toggleUnitTypeCheckbox();
         updateLocalStorageCalcs(e, "updateUnitTypeValues");
+        break;
+      case "costType":
+        toggleCostTypeCheckbox();
         break;
       case "bagSize":
         deliverMessage(e, "bag size change");
