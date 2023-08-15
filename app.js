@@ -534,7 +534,7 @@ function calculateTemplate(type) {
   if (calculators.length) {
     calculators.forEach((calculator, index) => {
       let length, width, quantity, height, depth;
-      let formula;
+      let formula = 0;
 
       switch (type) {
         case shapes.slab.type:
@@ -585,7 +585,7 @@ function calculateTemplate(type) {
           // formula
           for (steps = 0; steps < stepCount; steps++) {
             if (steps === stepCount - 1) {
-              formula = width * rise * (steps + 1) * platformDepth * quantity;
+              formula += width * rise * (steps + 1) * platformDepth * quantity;
             } else {
               formula += width * rise * (steps + 1) * run * quantity;
             }
