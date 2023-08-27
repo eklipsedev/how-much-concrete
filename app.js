@@ -107,7 +107,7 @@ function calculateTotal() {
   if (total === 0) {
     results.style.display = "none";
   } else {
-    results.style.display = "flex";
+    results.style.display = "block";
   }
 }
 
