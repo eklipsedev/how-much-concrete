@@ -915,7 +915,7 @@ function deliverMessage(e, action) {
       n = "waste percentage updated";
       break;
     case "cost per bag change":
-      n = "cost per bag updated";
+      n = "price updated";
       break;
     case "bag size change":
       n = "bag size updated";
